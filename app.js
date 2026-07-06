@@ -79,16 +79,11 @@ function sendJson(response, statusCode, payload) {
 }
 
 function customizeHtml(html) {
-  return html
-    .replaceAll("SportClan", BRAND_NAME)
-    .replaceAll("sportclan", BRAND_NAME.toLowerCase())
-    .replace('<body><div hidden=""><!--$--><!--/$--></div>', '<body><div hidden=""><!--$--><!--/$--></div>')
-    .replace('<div class="site-frame min-h-screen overflow-x-hidden"><header class="sticky top-0 z-40 border-b border-white/10 bg-[#081018]/80 backdrop-blur-xl">', '<div class="site-frame min-h-screen overflow-x-hidden"><div class="border-b border-[rgba(198,161,91,0.24)] bg-[rgba(198,161,91,0.14)] px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] text-[#f3e2bf] sm:px-6">Промокод WHIST50 — бонус до 300 рублей</div><header class="sticky top-0 z-40 border-b border-white/10 bg-[#081018]/80 backdrop-blur-xl">')
-    .replace('aria-label="На главную, Whistle"><span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-sm font-semibold text-brand">SC</span>', 'aria-label="На главную, Whistle"><span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-sm font-semibold text-brand">W</span>')
-    .replace('<div class="flex items-center gap-3"><a href="#responsible" class="button-shared focus-visible:outline-none button-primary">Памятка по рискам</a></div>', '<div class="flex items-center gap-3"><div class="hidden rounded-full border border-[rgba(198,161,91,0.24)] bg-[rgba(198,161,91,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-soft md:inline-flex">Промокод WHIST50 — бонус до 300 рублей</div><a href="#responsible" class="button-shared focus-visible:outline-none button-primary">Памятка по рискам</a></div>')
-    .replace('href="#events" class="button-shared focus-visible:outline-none button-primary w-full px-5 text-center whitespace-normal leading-5" aria-label="Начать ставить. Перед началом ставок сначала изучите событие, сравните линию и оцените риски."', `href="${BET_LINK}" target="_blank" rel="noopener noreferrer" class="button-shared focus-visible:outline-none button-primary w-full px-5 text-center whitespace-normal leading-5" aria-label="Начать ставить. Открыть сайт ставок в новой вкладке."`)
-    .replace('Перед началом ставок сначала изучите событие, сравните линию и оцените риски.</p>', 'Перед началом ставок сначала изучите событие, сравните линию и оцените риски.</p><p class="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-soft">Промокод WHIST50 — бонус до 300 рублей</p>')
-    .replace('Бонусные предложения доступны по правилам акции. Проверьте условия бонусов до активации.</p>', 'Бонусные предложения доступны по правилам акции. Промокод <span class="font-semibold text-[#f3e2bf]">WHIST50</span> дает бонус до <span class="font-semibold text-[#f3e2bf]">300 рублей</span>. Проверьте условия бонусов до активации.</p>');
+  if (html.includes('/customize.js')) {
+    return html;
+  }
+
+  return html.replace("</head>", '<script src="/customize.js" defer></script></head>');
 }
 
 function sendFile(response, filePath) {
@@ -241,8 +236,9 @@ async function handleRequest(request, response) {
       return;
     }
 
-    if (url.pathname === "/" || url.pathname === "/index.html" || url.pathname === "/api/index") {
-      await proxyHtml(response);
+    if (url.pathname === "/api/index") {
+      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Not found");
       return;
     }
 
