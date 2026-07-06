@@ -52,12 +52,8 @@ function syncPromoBannerContent(promoBanner) {
     const button = promoBanner.querySelector("[data-whistle-promo-button='top']");
     if (button) {
       button.href = BETTING_URL;
-      button.target = "_blank";
-      button.rel = "noopener noreferrer";
-      button.onclick = (event) => {
-        event.preventDefault();
-        window.open(BETTING_URL, "_blank", "noopener,noreferrer");
-      };
+      button.target = "_self";
+      button.rel = "noreferrer";
     }
     return;
   }
@@ -71,15 +67,11 @@ function syncPromoBannerContent(promoBanner) {
   const button = document.createElement("a");
   button.dataset.whistlePromoButton = "top";
   button.href = BETTING_URL;
-  button.target = "_blank";
-  button.rel = "noopener noreferrer";
+  button.target = "_self";
+  button.rel = "noreferrer";
   button.className = "button-shared focus-visible:outline-none button-primary";
   button.textContent = "Перейти к ставкам";
-  button.setAttribute("aria-label", "Перейти к ставкам. Открыть сайт ставок в новой вкладке.");
-  button.onclick = (event) => {
-    event.preventDefault();
-    window.open(BETTING_URL, "_blank", "noopener,noreferrer");
-  };
+  button.setAttribute("aria-label", "Перейти к ставкам.");
 
   content.append(text, button);
   promoBanner.replaceChildren(content);
@@ -137,13 +129,9 @@ function updateBettingCards() {
 
     if (label && bettingLabels.has(label)) {
       button.href = BETTING_URL;
-      button.target = "_blank";
-      button.rel = "noopener noreferrer";
-      button.setAttribute("aria-label", `${label}. Открыть сайт ставок в новой вкладке.`);
-      button.onclick = (event) => {
-        event.preventDefault();
-        window.open(BETTING_URL, "_blank", "noopener,noreferrer");
-      };
+      button.target = "_self";
+      button.rel = "noreferrer";
+      button.setAttribute("aria-label", `${label}.`);
     }
 
     if (label === "Начать ставить") {
