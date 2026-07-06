@@ -35,12 +35,19 @@ function updateBranding() {
 }
 
 function insertPromoBanner() {
-  if (document.querySelector("[data-whistle-promo='top']")) {
+  const siteFrame = document.querySelector(".site-frame");
+  if (!siteFrame) {
     return;
   }
 
-  const siteFrame = document.querySelector(".site-frame");
-  if (!siteFrame) {
+  const existingPromo =
+    siteFrame.querySelector(":scope > [data-whistle-promo='top']") ||
+    Array.from(siteFrame.children).find((element) =>
+      element.textContent?.includes("Промокод WHIST50"),
+    );
+
+  if (existingPromo) {
+    existingPromo.dataset.whistlePromo = "top";
     return;
   }
 
