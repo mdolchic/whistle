@@ -42,7 +42,7 @@ function createPromoBanner() {
   const promoBanner = document.createElement("div");
   promoBanner.dataset.whistlePromo = "top";
   promoBanner.className =
-    "border-b border-[rgba(198,161,91,0.24)] bg-[rgba(198,161,91,0.14)] px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] text-[#f3e2bf] sm:px-6";
+    "relative z-50 border-b border-[rgba(198,161,91,0.24)] bg-[rgba(198,161,91,0.14)] px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] text-[#f3e2bf] sm:px-6";
   syncPromoBannerContent(promoBanner);
   return promoBanner;
 }
@@ -78,37 +78,35 @@ function syncPromoBannerContent(promoBanner) {
 }
 
 function insertPromoBanner() {
-  const body = document.body;
-  if (!body) {
+  const siteFrame = document.querySelector(".site-frame");
+  if (!siteFrame) {
     return;
   }
 
-  let promoBanner = body.querySelector("[data-whistle-promo='top']");
+  const strayPromoBanner = document.body?.querySelector(":scope > [data-whistle-promo='top']");
+  if (strayPromoBanner) {
+    strayPromoBanner.remove();
+  }
+
+  let promoBanner =
+    siteFrame.querySelector(":scope > [data-whistle-promo='top']") ||
+    Array.from(siteFrame.children).find((element) =>
+      element.textContent?.includes("Промокод WHIST50"),
+    );
+
   if (!promoBanner) {
     promoBanner = createPromoBanner();
+    siteFrame.prepend(promoBanner);
   }
+
+  promoBanner.dataset.whistlePromo = "top";
+  promoBanner.classList.add("relative", "z-50");
   syncPromoBannerContent(promoBanner);
-
-  const skipLink = body.querySelector("a[href='#content']");
-  const anchorElement = skipLink || body.firstElementChild;
-
-  if (!promoBanner.isConnected) {
-    if (anchorElement) {
-      anchorElement.insertAdjacentElement("afterend", promoBanner);
-    } else {
-      body.prepend(promoBanner);
-    }
-    return;
-  }
-
-  if (anchorElement && promoBanner.previousElementSibling !== anchorElement) {
-    anchorElement.insertAdjacentElement("afterend", promoBanner);
-  }
 }
 
 function watchPromoBanner() {
-  const body = document.body;
-  if (!body || body.dataset.whistlePromoObserver === "active") {
+  const siteFrame = document.querySelector(".site-frame");
+  if (!siteFrame || siteFrame.dataset.whistlePromoObserver === "active") {
     return;
   }
 
@@ -116,8 +114,8 @@ function watchPromoBanner() {
     insertPromoBanner();
   });
 
-  observer.observe(body, { childList: true });
-  body.dataset.whistlePromoObserver = "active";
+  observer.observe(siteFrame, { childList: true });
+  siteFrame.dataset.whistlePromoObserver = "active";
 }
 
 function updateBettingCards() {
