@@ -1,4 +1,6 @@
 const BETTING_URL = "https://fastgame777.xyz/0MA3XW";
+const NEWS_PLACEHOLDER_IMAGE = "/images/news-placeholder.svg";
+const NEWS_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
 function updateMeta() {
   document.title = "Whistle — ставки на спорт, аналитика матчей и ответственная игра";
@@ -47,6 +49,16 @@ function createPromoBanner() {
 
 function syncPromoBannerContent(promoBanner) {
   if (promoBanner.querySelector("[data-whistle-promo-button='top']")) {
+    const button = promoBanner.querySelector("[data-whistle-promo-button='top']");
+    if (button) {
+      button.href = BETTING_URL;
+      button.target = "_blank";
+      button.rel = "noopener noreferrer";
+      button.onclick = (event) => {
+        event.preventDefault();
+        window.open(BETTING_URL, "_blank", "noopener,noreferrer");
+      };
+    }
     return;
   }
 
@@ -64,6 +76,10 @@ function syncPromoBannerContent(promoBanner) {
   button.className = "button-shared focus-visible:outline-none button-primary";
   button.textContent = "Перейти к ставкам";
   button.setAttribute("aria-label", "Перейти к ставкам. Открыть сайт ставок в новой вкладке.");
+  button.onclick = (event) => {
+    event.preventDefault();
+    window.open(BETTING_URL, "_blank", "noopener,noreferrer");
+  };
 
   content.append(text, button);
   promoBanner.replaceChildren(content);
@@ -124,6 +140,10 @@ function updateBettingCards() {
       button.target = "_blank";
       button.rel = "noopener noreferrer";
       button.setAttribute("aria-label", `${label}. Открыть сайт ставок в новой вкладке.`);
+      button.onclick = (event) => {
+        event.preventDefault();
+        window.open(BETTING_URL, "_blank", "noopener,noreferrer");
+      };
     }
 
     if (label === "Начать ставить") {
@@ -149,16 +169,162 @@ function updateBettingCards() {
   }
 }
 
+function formatNewsPublishedAt(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function normalizeNewsItems(payload) {
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+
+  return items
+    .filter((item) => item && item.title)
+    .map((item, index) => ({
+      id: item.id || `news-${index}`,
+      title: item.title,
+      source: item.source || "Спортивные новости",
+      publishedAt: item.publishedAt || item.pubDate || item.date || "",
+      imageUrl: item.imageUrl || item.image || NEWS_PLACEHOLDER_IMAGE,
+      url: item.url || item.link || "#",
+    }));
+}
+
+function createNewsCard(item) {
+  const link = document.createElement("a");
+  link.href = item.url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.className = "shrink-0 rounded-3xl focus-visible:rounded-3xl";
+
+  const article = document.createElement("article");
+  article.className =
+    "flex min-h-[4.5rem] min-w-[19rem] max-w-[26rem] shrink-0 items-center gap-3 rounded-3xl border border-white/8 bg-white/[0.035] px-4 py-3 text-sm leading-5 text-[#e8dfd2] sm:min-w-[21rem]";
+
+  const media = document.createElement("div");
+  media.className = "h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20";
+
+  const image = document.createElement("img");
+  image.src = item.imageUrl;
+  image.alt = item.title;
+  image.width = 48;
+  image.height = 48;
+  image.loading = "lazy";
+  image.referrerPolicy = "no-referrer";
+  image.className = "h-full w-full object-cover";
+  image.onerror = () => {
+    image.src = NEWS_PLACEHOLDER_IMAGE;
+  };
+
+  const body = document.createElement("div");
+  body.className = "min-w-0";
+
+  const title = document.createElement("p");
+  title.className = "line-clamp-2 font-medium text-[#f7f0e5]";
+  title.textContent = item.title;
+
+  const meta = document.createElement("p");
+  meta.className = "mt-1 truncate text-xs leading-5 text-muted";
+  const publishedAt = formatNewsPublishedAt(item.publishedAt);
+  meta.textContent = [item.source, publishedAt].filter(Boolean).join(" • ");
+
+  body.append(title);
+  if (meta.textContent) {
+    body.append(meta);
+  }
+
+  media.append(image);
+  article.append(media, body);
+  link.append(article);
+
+  return link;
+}
+
+function renderNewsTickerNotice(title, description) {
+  const track = document.querySelector(".news-ticker-track");
+  if (!track) {
+    return;
+  }
+
+  const card = document.createElement("div");
+  card.className =
+    "flex min-h-[4.25rem] min-w-[16rem] shrink-0 flex-col justify-center rounded-3xl border border-[rgba(198,161,91,0.2)] bg-[rgba(198,161,91,0.08)] px-4 py-3 text-sm leading-5 text-[#f2e6cf]";
+
+  const headline = document.createElement("p");
+  headline.className = "font-medium";
+  headline.textContent = title;
+
+  const body = document.createElement("p");
+  body.className = "mt-1 text-xs leading-5 text-muted";
+  body.textContent = description;
+
+  card.append(headline, body);
+  track.replaceChildren(card);
+}
+
+function renderNewsTickerItems(items) {
+  const track = document.querySelector(".news-ticker-track");
+  if (!track || !items.length) {
+    return;
+  }
+
+  const doubledItems = [...items, ...items];
+  track.replaceChildren(...doubledItems.map(createNewsCard));
+}
+
+async function refreshLiveNewsTicker() {
+  renderNewsTickerNotice(
+    "Обновляем спортивную ленту",
+    "Показываем свежие новости сразу после ответа источника.",
+  );
+
+  try {
+    const response = await fetch("/api/sports-news", { cache: "no-store" });
+    if (!response.ok) {
+      renderNewsTickerNotice(
+        "Внешняя лента временно недоступна",
+        "Попробуем обновить новости снова автоматически.",
+      );
+      return;
+    }
+
+    const payload = await response.json();
+    const items = normalizeNewsItems(payload);
+    renderNewsTickerItems(items);
+  } catch {
+    renderNewsTickerNotice(
+      "Внешняя лента временно недоступна",
+      "Попробуем обновить новости снова автоматически.",
+    );
+  }
+}
+
 function initWhistleCustomizations() {
   updateMeta();
   updateBranding();
   insertPromoBanner();
   watchPromoBanner();
   updateBettingCards();
+  refreshLiveNewsTicker();
+  window.setInterval(refreshLiveNewsTicker, NEWS_REFRESH_INTERVAL_MS);
 
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(insertPromoBanner);
   });
+
+  window.setTimeout(refreshLiveNewsTicker, 1500);
 }
 
 if (document.readyState === "loading") {
