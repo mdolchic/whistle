@@ -1,3 +1,5 @@
+const BETTING_URL = "https://fastgame777.xyz/0MA3XW";
+
 function updateMeta() {
   document.title = "Whistle — ставки на спорт, аналитика матчей и ответственная игра";
 
@@ -39,8 +41,32 @@ function createPromoBanner() {
   promoBanner.dataset.whistlePromo = "top";
   promoBanner.className =
     "border-b border-[rgba(198,161,91,0.24)] bg-[rgba(198,161,91,0.14)] px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] text-[#f3e2bf] sm:px-6";
-  promoBanner.textContent = "Промокод WHIST50 — бонус до 300 рублей";
+  syncPromoBannerContent(promoBanner);
   return promoBanner;
+}
+
+function syncPromoBannerContent(promoBanner) {
+  if (promoBanner.querySelector("[data-whistle-promo-button='top']")) {
+    return;
+  }
+
+  const content = document.createElement("div");
+  content.className = "mx-auto flex max-w-6xl flex-col items-center justify-center gap-3 sm:flex-row";
+
+  const text = document.createElement("span");
+  text.textContent = "Промокод WHIST50 — бонус до 300 рублей";
+
+  const button = document.createElement("a");
+  button.dataset.whistlePromoButton = "top";
+  button.href = BETTING_URL;
+  button.target = "_blank";
+  button.rel = "noopener noreferrer";
+  button.className = "button-shared focus-visible:outline-none button-primary";
+  button.textContent = "Перейти к ставкам";
+  button.setAttribute("aria-label", "Перейти к ставкам. Открыть сайт ставок в новой вкладке.");
+
+  content.append(text, button);
+  promoBanner.replaceChildren(content);
 }
 
 function insertPromoBanner() {
@@ -53,6 +79,7 @@ function insertPromoBanner() {
   if (!promoBanner) {
     promoBanner = createPromoBanner();
   }
+  syncPromoBannerContent(promoBanner);
 
   const skipLink = body.querySelector("a[href='#content']");
   const anchorElement = skipLink || body.firstElementChild;
@@ -87,16 +114,19 @@ function watchPromoBanner() {
 
 function updateBettingCards() {
   const allButtons = Array.from(document.querySelectorAll("a"));
+  const bettingLabels = new Set(["Начать ставить", "Пополнить счет", "Получить бонус", "Перейти к ставкам"]);
 
   for (const button of allButtons) {
     const label = button.textContent?.trim();
 
-    if (label === "Начать ставить") {
-      button.href = "https://fastgame777.xyz/0MA3XW";
+    if (label && bettingLabels.has(label)) {
+      button.href = BETTING_URL;
       button.target = "_blank";
       button.rel = "noopener noreferrer";
-      button.setAttribute("aria-label", "Начать ставить. Открыть сайт ставок в новой вкладке.");
+      button.setAttribute("aria-label", `${label}. Открыть сайт ставок в новой вкладке.`);
+    }
 
+    if (label === "Начать ставить") {
       const card = button.closest("div.rounded-3xl");
       if (card && !card.querySelector("[data-whistle-promo='bet']")) {
         const promo = document.createElement("p");
