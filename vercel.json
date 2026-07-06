@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "_next/static/**,images/**,index.html"
+    }
+  },
   "rewrites": [
     { "source": "/api/sports-news", "destination": "/api/index" },
     { "source": "/_next/(.*)", "destination": "/api/index" },

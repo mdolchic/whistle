@@ -183,12 +183,21 @@ async function proxyHtml(response) {
     return;
   } catch {}
 
-  const fallbackHtml = fs.readFileSync(INDEX_PATH, "utf8");
-  response.writeHead(200, {
-    "Content-Type": "text/html; charset=utf-8",
-    "Cache-Control": "no-cache",
+  try {
+    const fallbackHtml = fs.readFileSync(INDEX_PATH, "utf8");
+    response.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-cache",
+    });
+    response.end(customizeHtml(fallbackHtml));
+    return;
+  } catch {}
+
+  response.writeHead(503, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "no-store",
   });
-  response.end(customizeHtml(fallbackHtml));
+  response.end("Temporary unavailable");
 }
 
 async function proxyAsset(requestPath, response) {
@@ -218,36 +227,44 @@ function resolveLocalAsset(urlPathname) {
 }
 
 async function handleRequest(request, response) {
-  if (!request.url) {
-    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Bad request");
-    return;
+  try {
+    if (!request.url) {
+      response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Bad request");
+      return;
+    }
+
+    const url = new URL(request.url, `http://${request.headers.host || "127.0.0.1"}`);
+
+    if (url.pathname === "/api/sports-news") {
+      await proxySportsNews(response);
+      return;
+    }
+
+    if (url.pathname === "/" || url.pathname === "/index.html" || url.pathname === "/api/index") {
+      await proxyHtml(response);
+      return;
+    }
+
+    const localPath = resolveLocalAsset(url.pathname);
+    if (localPath.startsWith(ROOT_DIR) && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+      sendFile(response, localPath);
+      return;
+    }
+
+    if (await proxyAsset(url.pathname, response)) {
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Not found");
+  } catch (error) {
+    response.writeHead(500, {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(`Internal error: ${error instanceof Error ? error.message : "unknown"}`);
   }
-
-  const url = new URL(request.url, `http://${request.headers.host || "127.0.0.1"}`);
-
-  if (url.pathname === "/api/sports-news") {
-    await proxySportsNews(response);
-    return;
-  }
-
-  if (url.pathname === "/" || url.pathname === "/index.html") {
-    await proxyHtml(response);
-    return;
-  }
-
-  const localPath = resolveLocalAsset(url.pathname);
-  if (localPath.startsWith(ROOT_DIR) && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
-    sendFile(response, localPath);
-    return;
-  }
-
-  if (await proxyAsset(url.pathname, response)) {
-    return;
-  }
-
-  response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-  response.end("Not found");
 }
 
 module.exports = {
