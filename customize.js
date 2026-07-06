@@ -34,30 +34,55 @@ function updateBranding() {
   }
 }
 
-function insertPromoBanner() {
-  const siteFrame = document.querySelector(".site-frame");
-  if (!siteFrame) {
-    return;
-  }
-
-  const existingPromo =
-    siteFrame.querySelector(":scope > [data-whistle-promo='top']") ||
-    Array.from(siteFrame.children).find((element) =>
-      element.textContent?.includes("Промокод WHIST50"),
-    );
-
-  if (existingPromo) {
-    existingPromo.dataset.whistlePromo = "top";
-    return;
-  }
-
+function createPromoBanner() {
   const promoBanner = document.createElement("div");
   promoBanner.dataset.whistlePromo = "top";
   promoBanner.className =
     "border-b border-[rgba(198,161,91,0.24)] bg-[rgba(198,161,91,0.14)] px-4 py-3 text-center text-sm font-semibold uppercase tracking-[0.16em] text-[#f3e2bf] sm:px-6";
   promoBanner.textContent = "Промокод WHIST50 — бонус до 300 рублей";
+  return promoBanner;
+}
 
-  siteFrame.prepend(promoBanner);
+function insertPromoBanner() {
+  const body = document.body;
+  if (!body) {
+    return;
+  }
+
+  let promoBanner = body.querySelector("[data-whistle-promo='top']");
+  if (!promoBanner) {
+    promoBanner = createPromoBanner();
+  }
+
+  const skipLink = body.querySelector("a[href='#content']");
+  const anchorElement = skipLink || body.firstElementChild;
+
+  if (!promoBanner.isConnected) {
+    if (anchorElement) {
+      anchorElement.insertAdjacentElement("afterend", promoBanner);
+    } else {
+      body.prepend(promoBanner);
+    }
+    return;
+  }
+
+  if (anchorElement && promoBanner.previousElementSibling !== anchorElement) {
+    anchorElement.insertAdjacentElement("afterend", promoBanner);
+  }
+}
+
+function watchPromoBanner() {
+  const body = document.body;
+  if (!body || body.dataset.whistlePromoObserver === "active") {
+    return;
+  }
+
+  const observer = new MutationObserver(() => {
+    insertPromoBanner();
+  });
+
+  observer.observe(body, { childList: true });
+  body.dataset.whistlePromoObserver = "active";
 }
 
 function updateBettingCards() {
@@ -98,7 +123,12 @@ function initWhistleCustomizations() {
   updateMeta();
   updateBranding();
   insertPromoBanner();
+  watchPromoBanner();
   updateBettingCards();
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(insertPromoBanner);
+  });
 }
 
 if (document.readyState === "loading") {
@@ -106,3 +136,5 @@ if (document.readyState === "loading") {
 } else {
   initWhistleCustomizations();
 }
+
+window.addEventListener("load", insertPromoBanner);
