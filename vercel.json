@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/sports-news", "destination": "/api/index" },
+    { "source": "/_next/(.*)", "destination": "/api/index" },
+    { "source": "/images/(.*)", "destination": "/api/index" },
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
+}
