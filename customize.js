@@ -1,6 +1,21 @@
 const BETTING_URL = "https://fastgame777.xyz/0MA3XW";
 const NEWS_PLACEHOLDER_IMAGE = "/images/news-placeholder.svg";
 const NEWS_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+const NEWS_FETCH_TIMEOUT_MS = 6000;
+const NEWS_FEED_SOURCES = [
+  {
+    url: "https://www.sport-express.ru/services/materials/news/football/se/",
+    source: "Спорт-Экспресс Футбол",
+  },
+  {
+    url: "https://www.sport-express.ru/services/materials/news/se/",
+    source: "Спорт-Экспресс",
+  },
+  {
+    url: "https://lenta.ru/rss/news/sport",
+    source: "Lenta.ru Спорт",
+  },
+];
 
 function updateMeta() {
   document.title = "Whistle — ставки на спорт, аналитика матчей и ответственная игра";
@@ -185,7 +200,146 @@ function normalizeNewsItems(payload) {
       publishedAt: item.publishedAt || item.pubDate || item.date || "",
       imageUrl: item.imageUrl || item.image || NEWS_PLACEHOLDER_IMAGE,
       url: item.url || item.link || "#",
+      description: item.description || "",
     }));
+}
+
+function createFreshUrl(url) {
+  const freshUrl = new URL(url);
+  freshUrl.searchParams.set("_", Date.now().toString());
+  return freshUrl.toString();
+}
+
+function createCorsProxyUrl(url) {
+  return `https://api.allorigins.win/raw?url=${encodeURIComponent(createFreshUrl(url))}`;
+}
+
+async function fetchTextWithTimeout(url) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), NEWS_FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return "";
+    }
+
+    return response.text();
+  } catch {
+    return "";
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function getNodeText(node, selector) {
+  const element = node.querySelector(selector);
+  return element?.textContent?.trim() || "";
+}
+
+function getNewsImageUrl(item) {
+  const mediaContent =
+    item.querySelector("media\\:content[url]") ||
+    item.querySelector("content[url]") ||
+    item.querySelector("enclosure[type^='image'][url]");
+
+  if (mediaContent?.getAttribute("url")) {
+    return mediaContent.getAttribute("url");
+  }
+
+  const description = getNodeText(item, "description, summary, content\\:encoded");
+  const imageMatch = description.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return imageMatch?.[1] || NEWS_PLACEHOLDER_IMAGE;
+}
+
+function getNewsLink(item) {
+  const atomLink = item.querySelector("link[href]");
+  return atomLink?.getAttribute("href") || getNodeText(item, "link") || "#";
+}
+
+function stripHtml(value) {
+  const template = document.createElement("template");
+  template.innerHTML = value;
+  return template.content.textContent?.replace(/\s+/g, " ").trim() || "";
+}
+
+function parseRssNews(xmlText, source) {
+  const documentXml = new DOMParser().parseFromString(xmlText, "application/xml");
+  if (documentXml.querySelector("parsererror")) {
+    return [];
+  }
+
+  return Array.from(documentXml.querySelectorAll("item, entry"))
+    .map((item, index) => ({
+      id: `${source}-${getNewsLink(item)}-${index}`,
+      title: getNodeText(item, "title"),
+      source,
+      publishedAt: getNodeText(item, "pubDate, published, updated, dc\\:date"),
+      imageUrl: getNewsImageUrl(item),
+      url: getNewsLink(item),
+      description: stripHtml(getNodeText(item, "description, summary, content\\:encoded")),
+    }))
+    .filter((item) => item.title && item.url !== "#");
+}
+
+async function fetchFeedNews(source) {
+  const feedUrls = [createFreshUrl(source.url), createCorsProxyUrl(source.url)];
+
+  for (const feedUrl of feedUrls) {
+    const xmlText = await fetchTextWithTimeout(feedUrl);
+    if (!xmlText) {
+      continue;
+    }
+
+    const items = parseRssNews(xmlText, source.source);
+    if (items.length) {
+      return items;
+    }
+  }
+
+  return [];
+}
+
+function mergeNewsItems(items) {
+  const seen = new Set();
+
+  return items
+    .filter((item) => {
+      const key = item.url || item.title;
+      if (!key || seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .sort((first, second) => {
+      const firstTime = new Date(first.publishedAt).getTime() || 0;
+      const secondTime = new Date(second.publishedAt).getTime() || 0;
+      return secondTime - firstTime;
+    })
+    .slice(0, 12);
+}
+
+async function fetchLiveNews() {
+  const settledFeeds = await Promise.allSettled(NEWS_FEED_SOURCES.map(fetchFeedNews));
+  const rssItems = settledFeeds.flatMap((result) =>
+    result.status === "fulfilled" ? result.value : [],
+  );
+
+  if (rssItems.length) {
+    return mergeNewsItems(rssItems);
+  }
+
+  const response = await fetch("/api/sports-news", { cache: "no-store" });
+  if (!response.ok) {
+    return [];
+  }
+
+  return normalizeNewsItems(await response.json());
 }
 
 function createNewsCard(item) {
@@ -270,6 +424,84 @@ function renderNewsTickerItems(items) {
   track.replaceChildren(...doubledItems.map(createNewsCard));
 }
 
+function createNewsSectionCard(item, index) {
+  const link = document.createElement("a");
+  link.href = item.url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.className = "rounded-[2rem] focus-visible:rounded-[2rem]";
+
+  const article = document.createElement("article");
+  article.className = [
+    "animate-fade-up flex h-full flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04]",
+    "shadow-[0_24px_64px_rgba(0,0,0,0.24)] transition duration-200 hover:-translate-y-0.5 hover:border-[rgba(198,161,91,0.24)]",
+    index % 3 === 1 ? "animate-delay-2" : index % 3 === 2 ? "animate-delay-3" : "animate-delay-1",
+  ].join(" ");
+
+  const imageFrame = document.createElement("div");
+  imageFrame.className = "aspect-[16/9] overflow-hidden border-b border-white/10 bg-black/10";
+
+  const image = document.createElement("img");
+  image.src = item.imageUrl || NEWS_PLACEHOLDER_IMAGE;
+  image.alt = item.title;
+  image.className = "h-full w-full object-cover";
+  image.loading = "lazy";
+  image.referrerPolicy = "no-referrer";
+  image.onerror = () => {
+    image.src = NEWS_PLACEHOLDER_IMAGE;
+  };
+
+  const content = document.createElement("div");
+  content.className = "flex flex-1 flex-col p-5";
+
+  const meta = document.createElement("div");
+  meta.className = "flex flex-wrap items-center gap-3 text-xs font-medium text-muted";
+
+  const source = document.createElement("span");
+  source.className = "text-brand";
+  source.textContent = item.source;
+
+  const date = document.createElement("span");
+  date.textContent = formatNewsPublishedAt(item.publishedAt);
+
+  const title = document.createElement("h3");
+  title.className = "mt-4 text-xl font-semibold text-ink";
+  title.textContent = item.title;
+
+  const description = document.createElement("p");
+  description.className = "mt-3 line-clamp-4 text-sm leading-6 text-muted";
+  description.textContent = item.description || "Свежий новостной контекст для спокойного анализа события.";
+
+  const action = document.createElement("div");
+  action.className = "mt-auto pt-5";
+
+  const actionText = document.createElement("span");
+  actionText.className = "button-shared focus-visible:outline-none button-secondary";
+  actionText.textContent = "Читать новость";
+
+  meta.append(source);
+  if (date.textContent) {
+    meta.append(date);
+  }
+  action.append(actionText);
+  content.append(meta, title, description, action);
+  imageFrame.append(image);
+  article.append(imageFrame, content);
+  link.append(article);
+
+  return link;
+}
+
+function renderNewsSectionItems(items) {
+  const section = document.querySelector("#sports-news");
+  const grid = section?.querySelector(".grid");
+  if (!grid || !items.length) {
+    return;
+  }
+
+  grid.replaceChildren(...items.slice(0, 6).map(createNewsSectionCard));
+}
+
 async function refreshLiveNewsTicker() {
   renderNewsTickerNotice(
     "Обновляем спортивную ленту",
@@ -277,8 +509,8 @@ async function refreshLiveNewsTicker() {
   );
 
   try {
-    const response = await fetch("/api/sports-news", { cache: "no-store" });
-    if (!response.ok) {
+    const items = await fetchLiveNews();
+    if (!items.length) {
       renderNewsTickerNotice(
         "Внешняя лента временно недоступна",
         "Попробуем обновить новости снова автоматически.",
@@ -286,9 +518,8 @@ async function refreshLiveNewsTicker() {
       return;
     }
 
-    const payload = await response.json();
-    const items = normalizeNewsItems(payload);
     renderNewsTickerItems(items);
+    renderNewsSectionItems(items);
   } catch {
     renderNewsTickerNotice(
       "Внешняя лента временно недоступна",
