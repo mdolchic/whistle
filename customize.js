@@ -135,7 +135,13 @@ function watchPromoBanner() {
 
 function updateBettingCards() {
   const allButtons = Array.from(document.querySelectorAll("a"));
-  const bettingLabels = new Set(["Начать ставить", "Пополнить счет", "Получить бонус", "Перейти к ставкам"]);
+  const bettingLabels = new Set([
+    "Зарегистрироваться",
+    "Начать ставить",
+    "Пополнить счет",
+    "Получить бонус",
+    "Перейти к ставкам",
+  ]);
 
   for (const button of allButtons) {
     const label = button.textContent?.trim();
@@ -198,7 +204,7 @@ function normalizeNewsItems(payload) {
       title: item.title,
       source: item.source || "Спортивные новости",
       publishedAt: item.publishedAt || item.pubDate || item.date || "",
-      imageUrl: item.imageUrl || item.image || NEWS_PLACEHOLDER_IMAGE,
+      imageUrl: normalizeNewsImageUrl(item.imageUrl || item.image),
       url: item.url || item.link || "#",
       description: item.description || "",
     }));
@@ -241,6 +247,23 @@ function getNodeText(node, selector) {
   return element?.textContent?.trim() || "";
 }
 
+function normalizeNewsImageUrl(url) {
+  const imageUrl = url?.trim();
+  if (!imageUrl || imageUrl === "#") {
+    return NEWS_PLACEHOLDER_IMAGE;
+  }
+
+  if (imageUrl.startsWith("//")) {
+    return `https:${imageUrl}`;
+  }
+
+  if (imageUrl.startsWith("http://")) {
+    return imageUrl.replace("http://", "https://");
+  }
+
+  return imageUrl;
+}
+
 function getNewsImageUrl(item) {
   const mediaContent =
     item.querySelector("media\\:content[url]") ||
@@ -248,12 +271,12 @@ function getNewsImageUrl(item) {
     item.querySelector("enclosure[type^='image'][url]");
 
   if (mediaContent?.getAttribute("url")) {
-    return mediaContent.getAttribute("url");
+    return normalizeNewsImageUrl(mediaContent.getAttribute("url"));
   }
 
   const description = getNodeText(item, "description, summary, content\\:encoded");
   const imageMatch = description.match(/<img[^>]+src=["']([^"']+)["']/i);
-  return imageMatch?.[1] || NEWS_PLACEHOLDER_IMAGE;
+  return normalizeNewsImageUrl(imageMatch?.[1]);
 }
 
 function getNewsLink(item) {
@@ -357,7 +380,7 @@ function createNewsCard(item) {
   media.className = "h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-black/20";
 
   const image = document.createElement("img");
-  image.src = item.imageUrl;
+  image.src = normalizeNewsImageUrl(item.imageUrl);
   image.alt = item.title;
   image.width = 48;
   image.height = 48;
@@ -442,7 +465,7 @@ function createNewsSectionCard(item, index) {
   imageFrame.className = "aspect-[16/9] overflow-hidden border-b border-white/10 bg-black/10";
 
   const image = document.createElement("img");
-  image.src = item.imageUrl || NEWS_PLACEHOLDER_IMAGE;
+  image.src = normalizeNewsImageUrl(item.imageUrl);
   image.alt = item.title;
   image.className = "h-full w-full object-cover";
   image.loading = "lazy";

@@ -1,13 +1,26 @@
 <svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1200" height="675" rx="36" fill="#0D1218"/>
-  <rect x="32" y="32" width="1136" height="611" rx="28" fill="#111820" stroke="rgba(255,255,255,0.10)"/>
-  <circle cx="150" cy="170" r="54" fill="#1C2835"/>
-  <path d="M120 220L175 155L235 235H120V220Z" fill="#C6A15B" fill-opacity="0.85"/>
-  <rect x="280" y="126" width="520" height="28" rx="14" fill="#F5EFE3" fill-opacity="0.92"/>
-  <rect x="280" y="176" width="410" height="22" rx="11" fill="#AEA79B" fill-opacity="0.55"/>
-  <rect x="88" y="314" width="1024" height="18" rx="9" fill="#AEA79B" fill-opacity="0.28"/>
-  <rect x="88" y="356" width="876" height="18" rx="9" fill="#AEA79B" fill-opacity="0.22"/>
-  <rect x="88" y="398" width="944" height="18" rx="9" fill="#AEA79B" fill-opacity="0.22"/>
-  <rect x="88" y="468" width="210" height="46" rx="23" fill="#C6A15B" fill-opacity="0.12" stroke="#C6A15B" stroke-opacity="0.35"/>
-  <text x="193" y="497" text-anchor="middle" fill="#E9DEC9" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">SportClan</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="675" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111B"/>
+      <stop offset="0.55" stop-color="#111820"/>
+      <stop offset="1" stop-color="#241D12"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(935 140) rotate(132) scale(520 360)">
+      <stop stop-color="#C6A15B" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#C6A15B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="675" rx="36" fill="url(#bg)"/>
+  <rect width="1200" height="675" rx="36" fill="url(#glow)"/>
+  <path d="M0 470C155 395 265 425 390 468C545 522 690 540 846 455C975 385 1075 390 1200 432V675H0V470Z" fill="#0A141F" fill-opacity="0.72"/>
+  <path d="M0 505C190 428 315 463 452 505C616 555 740 548 886 478C1016 416 1102 426 1200 458" stroke="#C6A15B" stroke-opacity="0.38" stroke-width="5"/>
+  <circle cx="832" cy="320" r="104" fill="#F5EFE3" fill-opacity="0.94"/>
+  <path d="M832 216C848 246 874 270 914 280C883 302 866 336 870 378C837 355 801 351 764 376C772 335 758 304 724 280C763 274 793 250 832 216Z" fill="#111820"/>
+  <circle cx="832" cy="320" r="104" stroke="#C6A15B" stroke-width="10" stroke-opacity="0.9"/>
+  <path d="M278 210H628" stroke="#F5EFE3" stroke-width="24" stroke-linecap="round" stroke-opacity="0.95"/>
+  <path d="M278 266H548" stroke="#AEA79B" stroke-width="18" stroke-linecap="round" stroke-opacity="0.72"/>
+  <rect x="88" y="88" width="1024" height="499" rx="32" stroke="white" stroke-opacity="0.1"/>
+  <rect x="88" y="88" width="1024" height="499" rx="32" fill="white" fill-opacity="0.025"/>
+  <rect x="278" y="354" width="250" height="62" rx="31" fill="#C6A15B" fill-opacity="0.18" stroke="#C6A15B" stroke-opacity="0.42"/>
+  <text x="403" y="394" text-anchor="middle" fill="#F0CC89" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700">WHISTLE NEWS</text>
 </svg>
