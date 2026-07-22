@@ -1,4 +1,13 @@
 const BETTING_URL = "https://fastgame777.xyz/0MA3XW";
+const BETTING_LABELS = [
+  "Зарегистрироваться",
+  "Получить бонус",
+  "Посмотреть линию",
+  "Скачать приложение",
+  "Пополнить счет",
+  "Начать ставить",
+  "Перейти к ставкам",
+];
 const NEWS_PLACEHOLDER_IMAGE = "/images/news-placeholder.svg";
 const NEWS_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 const NEWS_FETCH_TIMEOUT_MS = 6000;
@@ -133,24 +142,33 @@ function watchPromoBanner() {
   siteFrame.dataset.whistlePromoObserver = "active";
 }
 
+function getBettingLabel(text) {
+  const normalizedText = text?.replace(/\s+/g, " ").trim();
+  if (!normalizedText) {
+    return "";
+  }
+
+  return BETTING_LABELS.find(
+    (label) => normalizedText === label || normalizedText.startsWith(`${label} `),
+  ) || "";
+}
+
+function syncBettingButton(button, label) {
+  button.href = BETTING_URL;
+  button.target = "_self";
+  button.rel = "noreferrer";
+  button.dataset.whistleBettingCta = "true";
+  button.setAttribute("aria-label", `${label}.`);
+}
+
 function updateBettingCards() {
   const allButtons = Array.from(document.querySelectorAll("a"));
-  const bettingLabels = new Set([
-    "Зарегистрироваться",
-    "Начать ставить",
-    "Пополнить счет",
-    "Получить бонус",
-    "Перейти к ставкам",
-  ]);
 
   for (const button of allButtons) {
-    const label = button.textContent?.trim();
+    const label = getBettingLabel(button.textContent);
 
-    if (label && bettingLabels.has(label)) {
-      button.href = BETTING_URL;
-      button.target = "_self";
-      button.rel = "noreferrer";
-      button.setAttribute("aria-label", `${label}.`);
+    if (label) {
+      syncBettingButton(button, label);
     }
 
     if (label === "Начать ставить") {
@@ -174,6 +192,33 @@ function updateBettingCards() {
       }
     }
   }
+}
+
+function watchBettingCards() {
+  const siteFrame = document.querySelector(".site-frame") || document.body;
+  if (!siteFrame || siteFrame.dataset.whistleBettingObserver === "active") {
+    return;
+  }
+
+  const observer = new MutationObserver(updateBettingCards);
+  observer.observe(siteFrame, { childList: true, subtree: true });
+  siteFrame.dataset.whistleBettingObserver = "active";
+}
+
+function handleBettingClick(event) {
+  const button = event.target?.closest?.("a");
+  if (!button) {
+    return;
+  }
+
+  const label = getBettingLabel(button.textContent);
+  if (!label) {
+    return;
+  }
+
+  syncBettingButton(button, label);
+  event.preventDefault();
+  window.location.assign(BETTING_URL);
 }
 
 function formatNewsPublishedAt(value) {
@@ -557,13 +602,24 @@ function initWhistleCustomizations() {
   insertPromoBanner();
   watchPromoBanner();
   updateBettingCards();
+  watchBettingCards();
   refreshLiveNewsTicker();
   window.setInterval(refreshLiveNewsTicker, NEWS_REFRESH_INTERVAL_MS);
 
+  if (document.body.dataset.whistleBettingClickHandler !== "active") {
+    document.addEventListener("click", handleBettingClick, true);
+    document.body.dataset.whistleBettingClickHandler = "active";
+  }
+
   window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(insertPromoBanner);
+    window.requestAnimationFrame(() => {
+      insertPromoBanner();
+      updateBettingCards();
+    });
   });
 
+  window.setTimeout(updateBettingCards, 1000);
+  window.setTimeout(updateBettingCards, 3000);
   window.setTimeout(refreshLiveNewsTicker, 1500);
 }
 
@@ -573,4 +629,7 @@ if (document.readyState === "loading") {
   initWhistleCustomizations();
 }
 
-window.addEventListener("load", insertPromoBanner);
+window.addEventListener("load", () => {
+  insertPromoBanner();
+  updateBettingCards();
+});
